@@ -1,20 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase.js'
+import { supabase } from './supabase.js'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)         // Supabase auth user
-  const [entity, setEntity] = useState(null)     // TraceChain entity record
-  const [loading, setLoading] = useState(true)   // Initial session check
+  const [user, setUser]       = useState(null) // Supabase Auth user
+  const [entity, setEntity]   = useState(null) // TraceChain entity record
+  const [loading, setLoading] = useState(true)
 
-  // Fetch the entity record that matches the logged-in user's email
-  const fetchEntity = async (email) => {
-    if (!email) return null
+  // Fetch the entity record linked to a Supabase Auth user ID
+  const fetchEntity = async (authUserId) => {
+    if (!authUserId) return null
     const { data, error } = await supabase
       .from('entities')
       .select('*')
-      .eq('email', email)
+      .eq('auth_user_id', authUserId)
       .single()
     if (error) {
       console.error('Entity fetch error:', error.message)
@@ -23,64 +23,75 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  // Sign in with email + password (matched against entities table)
+  // Sign in via Supabase Auth — passwords are now hashed by Supabase (bcrypt)
   const signIn = async (email, password) => {
-    // Look up entity by email
-    const { data: entityData, error: lookupError } = await supabase
-      .from('entities')
-      .select('*')
-      .eq('email', email)
-      .single()
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    })
 
-    if (lookupError || !entityData) {
-      return { error: 'No account found with that email address.' }
+    if (error) {
+      if (error.message.toLowerCase().includes('invalid login credentials')) {
+        return { error: 'Incorrect email or password. Please try again.' }
+      }
+      return { error: error.message }
     }
 
-    // Simple password check (MVP: comparing plain text — in production use bcrypt via Edge Function)
-    // For now we store password_hash as plain text during registration for demo purposes
-    if (entityData.password_hash !== password) {
-      return { error: 'Incorrect password. Please try again.' }
-    }
+    const entityData = await fetchEntity(data.user.id)
 
-    // Check verification status
-    if (entityData.verification_status === 'rejected') {
-      return { error: 'Your account has been rejected. Please contact support.' }
+    if (!entityData) {
+      await supabase.auth.signOut()
+      return { error: 'No TraceChain account is linked to this email. Please register first.' }
     }
 
     if (entityData.verification_status === 'suspended') {
+      await supabase.auth.signOut()
       return { error: 'Your account has been suspended. Please contact support.' }
     }
 
-    // Set session in state
+    setUser(data.user)
     setEntity(entityData)
-    setUser({ email: entityData.email, id: entityData.id })
-
-    // Persist session in sessionStorage
-    sessionStorage.setItem('tc_entity', JSON.stringify(entityData))
-
     return { success: true, entity: entityData }
   }
 
-  // Sign out
-  const signOut = () => {
+  // Sign out via Supabase Auth
+  const signOut = async () => {
+    await supabase.auth.signOut()
     setUser(null)
     setEntity(null)
-    sessionStorage.removeItem('tc_entity')
   }
 
-  // Restore session on page load
+  // Restore session on page load + subscribe to auth state changes
   useEffect(() => {
-    const stored = sessionStorage.getItem('tc_entity')
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        setEntity(parsed)
-        setUser({ email: parsed.email, id: parsed.id })
-      } catch {
-        sessionStorage.removeItem('tc_entity')
+    // Check for an existing session immediately
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user)
+        const entityData = await fetchEntity(session.user.id)
+        setEntity(entityData)
       }
-    }
-    setLoading(false)
+      setLoading(false)
+    })
+
+    // Keep state in sync with Supabase Auth events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          setUser(session.user)
+          const entityData = await fetchEntity(session.user.id)
+          setEntity(entityData)
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setEntity(null)
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          // Silently refresh entity data on token refresh
+          const entityData = await fetchEntity(session.user.id)
+          setEntity(entityData)
+        }
+      }
+    )
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const value = {
@@ -89,13 +100,15 @@ export function AuthProvider({ children }) {
     loading,
     signIn,
     signOut,
-    isAuthenticated: !!entity,
-    role: entity?.role || null,
-    nexusId: entity?.nexus_id || null,
-    verificationStatus: entity?.verification_status || null,
-    isAdmin: entity?.role === 'admin',
-    isInspector: entity?.role === 'inspector',
-    isPending: entity?.verification_status === 'pending',
+    fetchEntity,
+    isAuthenticated:     !!entity,
+    role:                entity?.role               || null,
+    nexusId:             entity?.nexus_id           || null,
+    verificationStatus:  entity?.verification_status || null,
+    isAdmin:             entity?.role === 'admin',
+    isInspector:         entity?.role === 'inspector',
+    isPending:           entity?.verification_status === 'pending',
+    isSuspended:         entity?.verification_status === 'suspended',
   }
 
   return (
@@ -107,7 +120,7 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (!context) throw new Error('useAuth must be used within an AuthProvider')
+  if (!context) throw new Error('useAuth must be used inside an AuthProvider')
   return context
 }
 

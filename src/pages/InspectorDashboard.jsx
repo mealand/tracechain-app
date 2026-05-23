@@ -45,7 +45,7 @@ export default function InspectorDashboard() {
     e.email?.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handleSignOut = () => { signOut(); navigate('/login') }
+  const handleSignOut = async () => { await signOut(); navigate('/login') }
 
   return (
     <div className="min-h-screen bg-surface">

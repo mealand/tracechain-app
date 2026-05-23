@@ -22,7 +22,7 @@ export default function EntityDashboard() {
   const status = STATUS_CONFIG[entity?.verification_status] || STATUS_CONFIG.pending
   const StatusIcon = status.icon
 
-  const handleSignOut = () => { signOut(); navigate('/login') }
+  const handleSignOut = async () => { await signOut(); navigate('/login') }
 
   return (
     <div className="min-h-screen bg-surface">
