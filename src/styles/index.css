@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #004C99;
+    --color-secondary: #E5EEF7;
+    --color-accent: #00B3A4;
+    --color-success: #2E8B57;
+    --color-error: #E63946;
+    --color-text-primary: #1A1A1A;
+    --color-text-secondary: #555555;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    color: var(--color-text-primary);
+    background-color: #F4F8FC;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sora', sans-serif;
+  }
+}
+
+@layer components {
+  /* Primary button */
+  .btn-primary {
+    @apply bg-primary text-white font-display font-semibold px-6 py-3 rounded-lg 
+           transition-all duration-200 hover:bg-primary-600 active:scale-95 
+           shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Outline button */
+  .btn-outline {
+    @apply border-2 border-primary text-primary font-display font-semibold px-6 py-3 
+           rounded-lg transition-all duration-200 hover:bg-primary hover:text-white 
+           active:scale-95;
+  }
+
+  /* Form input */
+  .form-input {
+    @apply w-full px-4 py-3 border border-gray-200 rounded-lg font-body text-textPrimary
+           bg-white placeholder-textSecondary
+           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+           transition-all duration-200;
+  }
+
+  /* Form label */
+  .form-label {
+    @apply block text-sm font-display font-semibold text-textPrimary mb-1.5;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-white rounded-2xl shadow-card border border-gray-100 p-6;
+  }
+
+  /* Section title */
+  .section-title {
+    @apply font-display font-bold text-textPrimary;
+  }
+
+  /* Nexus ID badge */
+  .nexus-badge {
+    @apply inline-flex items-center gap-2 bg-primary/10 text-primary font-mono text-sm 
+           font-medium px-3 py-1.5 rounded-full border border-primary/20;
+  }
+
+  /* Status badge */
+  .badge-pending {
+    @apply inline-flex items-center gap-1 bg-yellow-50 text-yellow-700 text-xs font-semibold 
+           px-2.5 py-1 rounded-full border border-yellow-200;
+  }
+
+  .badge-verified {
+    @apply inline-flex items-center gap-1 bg-green-50 text-success text-xs font-semibold 
+           px-2.5 py-1 rounded-full border border-green-200;
+  }
+
+  .badge-rejected {
+    @apply inline-flex items-center gap-1 bg-red-50 text-error text-xs font-semibold 
+           px-2.5 py-1 rounded-full border border-red-200;
+  }
+  
+  /* Progress step */
+  .step-active {
+    @apply bg-primary text-white;
+  }
+
+  .step-complete {
+    @apply bg-accent text-white;
+  }
+
+  .step-inactive {
+    @apply bg-gray-100 text-textSecondary;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #004C99;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #003d7a;
+}
+
+/* Page transition animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f4f8 25%, #e2eaf3 50%, #f0f4f8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
