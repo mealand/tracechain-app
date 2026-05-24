@@ -1,6 +1,6 @@
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './lib/AuthContext.jsx'
+import { AuthProvider, useAuth } from './lib/AuthContext.jsx'
 import ProtectedRoute from './components/layout/ProtectedRoute.jsx'
 
 // Public pages
@@ -14,6 +14,15 @@ import EntityDashboard from './pages/EntityDashboard.jsx'
 import InspectorDashboard from './pages/InspectorDashboard.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 
+// Role-aware dashboard redirect
+function RoleBasedRedirect() {
+  const { entity } = useAuth()
+  if (!entity) return <Navigate to="/login" replace />
+  if (entity.role === 'admin')     return <Navigate to="/dashboard/admin"     replace />
+  if (entity.role === 'inspector') return <Navigate to="/dashboard/inspector" replace />
+  return <Navigate to="/dashboard/entity" replace />
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -22,8 +31,8 @@ function App() {
         <Route path="/" element={<Navigate to="/register" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<SelectRolePage />} />
-        <Route path="/register/:role" element={<RegistrationPage />} />
         <Route path="/register/success" element={<RegistrationSuccessPage />} />
+        <Route path="/register/:role" element={<RegistrationPage />} />
 
         {/* Protected — entity roles */}
         <Route path="/dashboard/entity" element={
@@ -46,10 +55,10 @@ function App() {
           </ProtectedRoute>
         } />
 
-        {/* Generic dashboard redirect */}
+        {/* Generic dashboard — role-aware redirect */}
         <Route path="/dashboard" element={
           <ProtectedRoute>
-            <Navigate to="/dashboard/entity" replace />
+            <RoleBasedRedirect />
           </ProtectedRoute>
         } />
 

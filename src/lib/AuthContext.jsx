@@ -1,14 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { supabase } from './supabase.js'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null) // Supabase Auth user
-  const [entity, setEntity]   = useState(null) // TraceChain entity record
+  const [user,    setUser]    = useState(null)
+  const [entity,  setEntity]  = useState(null)
   const [loading, setLoading] = useState(true)
+  const isMounted = useRef(true)
 
-  // Fetch the entity record linked to a Supabase Auth user ID
   const fetchEntity = async (authUserId) => {
     if (!authUserId) return null
     const { data, error } = await supabase
@@ -23,7 +23,6 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  // Sign in via Supabase Auth — passwords are now hashed by Supabase (bcrypt)
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
@@ -54,44 +53,56 @@ export function AuthProvider({ children }) {
     return { success: true, entity: entityData }
   }
 
-  // Sign out via Supabase Auth
   const signOut = async () => {
     await supabase.auth.signOut()
     setUser(null)
     setEntity(null)
   }
 
-  // Restore session on page load + subscribe to auth state changes
   useEffect(() => {
-    // Check for an existing session immediately
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-        const entityData = await fetchEntity(session.user.id)
-        setEntity(entityData)
-      }
-      setLoading(false)
-    })
+    isMounted.current = true
 
-    // Keep state in sync with Supabase Auth events
+    // Step 1 — restore session on page load
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user && isMounted.current) {
+          const entityData = await fetchEntity(session.user.id)
+          if (isMounted.current) {
+            setUser(session.user)
+            setEntity(entityData)
+          }
+        }
+      } catch (err) {
+        console.error('Session restore error:', err.message)
+      } finally {
+        if (isMounted.current) setLoading(false)
+      }
+    }
+
+    initAuth()
+
+    // Step 2 — listen for auth changes AFTER initial load
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          setUser(session.user)
-          const entityData = await fetchEntity(session.user.id)
-          setEntity(entityData)
-        } else if (event === 'SIGNED_OUT') {
+        if (!isMounted.current) return
+        if (event === 'SIGNED_OUT') {
           setUser(null)
           setEntity(null)
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          // Silently refresh entity data on token refresh
           const entityData = await fetchEntity(session.user.id)
-          setEntity(entityData)
+          if (isMounted.current) {
+            setUser(session.user)
+            setEntity(entityData)
+          }
         }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted.current = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const value = {
@@ -101,14 +112,30 @@ export function AuthProvider({ children }) {
     signIn,
     signOut,
     fetchEntity,
-    isAuthenticated:     !!entity,
-    role:                entity?.role               || null,
-    nexusId:             entity?.nexus_id           || null,
-    verificationStatus:  entity?.verification_status || null,
-    isAdmin:             entity?.role === 'admin',
-    isInspector:         entity?.role === 'inspector',
-    isPending:           entity?.verification_status === 'pending',
-    isSuspended:         entity?.verification_status === 'suspended',
+    isAuthenticated:    !!entity,
+    role:               entity?.role               || null,
+    nexusId:            entity?.nexus_id           || null,
+    verificationStatus: entity?.verification_status || null,
+    isAdmin:            entity?.role === 'admin',
+    isInspector:        entity?.role === 'inspector',
+    isPending:          entity?.verification_status === 'pending',
+    isSuspended:        entity?.verification_status === 'suspended',
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface">
+        <div className="flex flex-col items-center gap-3">
+          <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10 animate-pulse">
+            <polygon points="20,2 36,11 36,29 20,38 4,29 4,11"
+              fill="#004C99" stroke="#0070E0" strokeWidth="1.5" />
+            <path d="M13 22 L17 18 L20 21 L24 15 L27 18" stroke="white"
+              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </svg>
+          <p className="text-sm font-display font-semibold text-textSecondary">Loading TraceChain...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

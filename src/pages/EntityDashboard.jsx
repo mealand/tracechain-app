@@ -240,31 +240,39 @@ function RecordTransactionModal({ entity, batches, onClose, onSuccess }) {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const resolveNexusId = async () => {
-    if (!form.to_nexus_id.trim()) return
-    setResolving(true)
-    setToEntity(null)
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('entities')
-        .select('id, full_name, role, nexus_id, verification_status')
-        .eq('nexus_id', form.to_nexus_id.trim().toUpperCase())
-        .single()
-      if (fetchError || !data) {
-        setError('No entity found with that Nexus ID.')
-      } else if (data.id === entity.id) {
-        setError('You cannot record a transaction to yourself.')
-      } else {
-        setToEntity(data)
-        setError('')
-      }
-    } catch {
-      setError('Failed to look up Nexus ID.')
-    } finally {
-      setResolving(false)
-    }
-  }
+ const resolveNexusId = async () => {
+  if (!form.to_nexus_id.trim()) return
+  setResolving(true)
+  setToEntity(null)
+  try {
+    const { data, error: fetchError } = await supabase
+      .rpc('lookup_entity_by_nexus_id', {
+        p_nexus_id: form.to_nexus_id.trim().toUpperCase()
+      })
 
+    if (fetchError) {
+      setError('No entity found with that Nexus ID.')
+      return
+    }
+
+    // Handle both array and single object responses
+    const result = Array.isArray(data) ? data[0] : data
+
+    if (!result) {
+      setError('No entity found with that Nexus ID.')
+    } else if (result.id === entity.id) {
+      setError('You cannot record a transaction to yourself.')
+    } else {
+      setToEntity(result)
+      setError('')
+    }
+  } catch (err) {
+    console.error('Catch error:', err)
+    setError('Failed to look up Nexus ID.')
+  } finally {
+    setResolving(false)
+  }
+}
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.batch_id || !form.stage || !toEntity || !form.quantity_kg || !form.location) {
