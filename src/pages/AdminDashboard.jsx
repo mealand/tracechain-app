@@ -22,7 +22,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const { data } = await supabase
+      // Use service-role client so RLS doesn't filter out other users' rows
+      const client = supabaseAdmin || supabase
+      const { data } = await client
         .from('entities')
         .select('verification_status')
         .not('role', 'in', '(admin,inspector)')
@@ -77,7 +79,8 @@ export default function AdminDashboard() {
       })
 
       // Step 3: Insert entity record linked to the new auth user
-      const { error: insertError } = await supabase.from('entities').insert({
+      // Use supabaseAdmin so the INSERT bypasses RLS (service role required for admin-created accounts)
+      const { error: insertError } = await supabaseAdmin.from('entities').insert({
         nexus_id:              nexusId,
         role:                  createRole,
         full_name:             form.full_name,

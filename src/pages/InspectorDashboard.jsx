@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, Clock, CheckCircle2, XCircle, Search } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext.jsx'
-import { supabase } from '../lib/supabase.js'
+import { supabase, supabaseAdmin } from '../lib/supabase.js'
 
 export default function InspectorDashboard() {
   const { entity, signOut } = useAuth()
@@ -15,7 +15,9 @@ export default function InspectorDashboard() {
   useEffect(() => {
     const fetchEntities = async () => {
       setLoading(true)
-      const query = supabase
+      // Use service-role client so RLS doesn't restrict cross-entity reads
+      const client = supabaseAdmin || supabase
+      const query = client
         .from('entities')
         .select('id, nexus_id, full_name, role, email, verification_status, created_at')
         .not('role', 'in', '(admin,inspector)')
@@ -31,7 +33,9 @@ export default function InspectorDashboard() {
   }, [filter])
 
   const handleVerify = async (id, status) => {
-    await supabase.from('entities').update({
+    // Use service-role client so the UPDATE bypasses RLS (inspectors cannot UPDATE other users' rows)
+    const client = supabaseAdmin || supabase
+    await client.from('entities').update({
       verification_status: status,
       verified_by: entity?.id,
       verified_at: new Date().toISOString(),
