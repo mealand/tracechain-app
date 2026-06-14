@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage.jsx'
 import EntityDashboard from './pages/EntityDashboard.jsx'
 import InspectorDashboard from './pages/InspectorDashboard.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
+import DashboardPage from './pages/DashboardPage.jsx'
 
 // Role-aware dashboard redirect
 function RoleBasedRedirect() {
@@ -49,11 +50,18 @@ function App() {
         } />
 
         {/* Protected — admin only */}
-        <Route path="/dashboard/admin" element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } />
+<Route path="/dashboard/admin" element={
+  <ProtectedRoute allowedRoles={['admin']}>
+    <AdminDashboard />
+  </ProtectedRoute>
+} />
+
+{/* Protected — HQ dashboard (admin only) */}
+<Route path="/dashboard/hq" element={
+  <ProtectedRoute allowedRoles={['admin']}>
+    <DashboardPage />
+  </ProtectedRoute>
+} />
 
         {/* Generic dashboard — role-aware redirect */}
         <Route path="/dashboard" element={

@@ -142,10 +142,16 @@ export default function AdminDashboard() {
       </nav>
 
       <div className="pt-24 px-6 max-w-5xl mx-auto pb-16">
-        <div className="mb-8">
-          <h1 className="font-display font-bold text-2xl text-textPrimary mb-1">Admin Dashboard</h1>
-          <p className="font-body text-textSecondary text-sm">System overview and user management.</p>
-        </div>
+        <div className="mb-8 flex items-center justify-between">
+  <div>
+    <h1 className="font-display font-bold text-2xl text-textPrimary mb-1">Admin Dashboard</h1>
+    <p className="font-body text-textSecondary text-sm">System overview and user management.</p>
+  </div>
+  <a href="/dashboard/hq"
+    className="flex items-center gap-2 btn-primary text-sm py-2.5">
+    HQ Live Dashboard →
+  </a>
+</div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
