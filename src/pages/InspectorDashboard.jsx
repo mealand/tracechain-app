@@ -247,17 +247,22 @@ const [rejectTarget,  setRejectTarget]  = useState(null) // entity being rejecte
 const [rejectReason,  setRejectReason]  = useState('')
 const [rejectError,   setRejectError]   = useState('')
 const [rejectSaving,  setRejectSaving]  = useState(false)
+const [approveTarget, setApproveTarget] = useState(null)
+const [approveSaving, setApproveSaving] = useState(false)
 
-const handleApprove = async (id) => {
+const handleApproveSubmit = async () => {
+  setApproveSaving(true)
   const client = supabaseAdmin || supabase
   await client.from('entities').update({
     verification_status: 'verified',
     verified_by:         entity?.id,
     verified_at:         new Date().toISOString(),
     rejection_reason:    null,
-  }).eq('id', id)
-  setEntities(prev => prev.map(e => e.id === id
+  }).eq('id', approveTarget.id)
+  setEntities(prev => prev.map(e => e.id === approveTarget.id
     ? { ...e, verification_status: 'verified' } : e))
+  setApproveSaving(false)
+  setApproveTarget(null)
 }
 
 const handleRejectSubmit = async () => {
@@ -446,12 +451,12 @@ const handleRejectSubmit = async () => {
                       <td className="px-5 py-4">
                        {e.verification_status === 'pending' ? (
   <div className="flex gap-2">
-    <button onClick={() => handleApprove(e.id)}
-      className="flex items-center gap-1 px-3 py-1.5 bg-success/10 text-success
-        border border-success/20 rounded-lg text-xs font-display font-bold
-        hover:bg-success hover:text-white transition-all">
-      <CheckCircle2 className="w-3.5 h-3.5" /> Approve
-    </button>
+    <button onClick={() => setApproveTarget(e)}
+  className="flex items-center gap-1 px-3 py-1.5 bg-success/10 text-success
+    border border-success/20 rounded-lg text-xs font-display font-bold
+    hover:bg-success hover:text-white transition-all">
+  <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+</button>
     <button onClick={() => { setRejectTarget(e); setRejectReason(''); setRejectError('') }}
       className="flex items-center gap-1 px-3 py-1.5 bg-error/10 text-error
         border border-error/20 rounded-lg text-xs font-display font-bold
@@ -534,6 +539,58 @@ const handleRejectSubmit = async () => {
             {rejectSaving
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Rejecting…</>
               : <><XCircle className="w-4 h-4" /> Confirm Rejection</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+{/* Approval confirmation modal */}
+{approveTarget && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-fadeInUp">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h3 className="font-display font-bold text-textPrimary">Confirm Approval</h3>
+        <button onClick={() => setApproveTarget(null)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
+          <X className="w-4 h-4 text-textSecondary" />
+        </button>
+      </div>
+      <div className="px-6 py-5">
+        <div className="flex items-start gap-3 bg-green-50 border border-success/20 rounded-xl px-4 py-3 mb-5">
+          <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-display font-semibold text-success">
+              Approving: {approveTarget.full_name}
+            </p>
+            <p className="text-xs font-body text-success/80 mt-0.5">
+              {approveTarget.nexus_id} · {approveTarget.role?.replace(/_/g, ' ')}
+            </p>
+          </div>
+        </div>
+
+        <p className="text-sm font-body text-textSecondary mb-1">
+          This will grant <strong className="text-textPrimary">{approveTarget.full_name}</strong> full
+          access to the TraceChain supply chain network.
+        </p>
+        <p className="text-sm font-body text-textSecondary">
+          Make sure you have reviewed their submitted documents before proceeding.
+        </p>
+
+        <div className="flex items-center gap-3 mt-6">
+          <button onClick={() => setApproveTarget(null)}
+            className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-200
+              font-display font-semibold text-sm text-textSecondary
+              hover:border-primary hover:text-primary transition-all">
+            Cancel
+          </button>
+          <button onClick={handleApproveSubmit} disabled={approveSaving}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5
+              rounded-xl bg-success text-white font-display font-semibold text-sm
+              hover:bg-green-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+            {approveSaving
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Approving…</>
+              : <><CheckCircle2 className="w-4 h-4" /> Confirm Approval</>}
           </button>
         </div>
       </div>
