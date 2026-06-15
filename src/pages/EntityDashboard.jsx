@@ -636,11 +636,22 @@ export default function EntityDashboard() {
                 Your account is verified. You have full access to the TraceChain supply chain network.
               </p>
             )}
-            {entity?.verification_status === 'rejected' && (
-              <p className="font-body text-sm text-red-700 mt-0.5">
-                Your registration was rejected. Please contact support for details.
-              </p>
-            )}
+{entity?.verification_status === 'rejected' && (
+  <div className="mt-0.5">
+    <p className="font-body text-sm text-red-700">
+      Your registration was rejected.
+    </p>
+    {entity?.rejection_reason && (
+      <div className="mt-2 bg-red-100 border border-error/20 rounded-lg px-3 py-2">
+        <p className="text-xs font-display font-semibold text-error mb-0.5">Reason given:</p>
+        <p className="font-body text-sm text-red-700">{entity.rejection_reason}</p>
+      </div>
+    )}
+    <p className="font-body text-xs text-red-600 mt-2">
+      Please contact support or re-register with corrected information.
+    </p>
+  </div>
+)}
             {entity?.verification_status === 'suspended' && (
               <p className="font-body text-sm text-gray-700 mt-0.5">
                 Your account has been suspended. Please contact a NordRock Administrator.
